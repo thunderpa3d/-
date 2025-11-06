@@ -3,545 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دليل الاتصال</title>
+    <title>دليل الاتصال الذكي</title>
+    <meta name="description" content="تطبيق دليل اتصال ذكي يعمل بدون إنترنت مع مزامنة تلقائية">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        :root {
-            --primary: #4a6fa5;
-            --secondary: #2c3e50;
-            --success: #27ae60;
-            --danger: #e74c3c;
-            --warning: #f39c12;
-            --light: #f5f5f5;
-            --dark: #333;
-            --gray: #666;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: var(--light);
-            color: var(--dark);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-
-        h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-
-        .sync-status {
-            display: inline-flex;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-
-        .sync-status.offline {
-            background: rgba(231, 76, 60, 0.2);
-        }
-
-        .sync-status .icon {
-            margin-left: 5px;
-        }
-
-        .controls {
-            display: flex;
-            margin: 20px 0;
-        }
-
-        .search-box {
-            display: flex;
-            flex: 1;
-        }
-
-        .search-box input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px 0 0 5px;
-            font-size: 16px;
-        }
-
-        .search-box button {
-            background: var(--secondary);
-            color: white;
-            border: none;
-            padding: 0 15px;
-            border-radius: 0 5px 5px 0;
-            cursor: pointer;
-        }
-
-        .contacts-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .contact-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            transition: transform 0.3s;
-            border-top: 4px solid var(--primary);
-        }
-
-        .contact-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .contact-header {
-            margin-bottom: 15px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        .contact-name {
-            font-size: 22px;
-            font-weight: bold;
-            color: var(--secondary);
-        }
-
-        .contact-info {
-            margin: 15px 0;
-        }
-
-        .contact-field {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 8px 0;
-        }
-
-        .contact-field i {
-            width: 24px;
-            color: var(--primary);
-            margin-left: 10px;
-        }
-
-        .contact-field span {
-            color: var(--gray);
-        }
-
-        .contact-actions {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
-
-        .contact-actions button {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            transition: all 0.3s;
-        }
-
-        .contact-actions button:hover {
-            background: rgba(74, 111, 165, 0.1);
-        }
-
-        .contact-actions button.whatsapp {
-            color: #25D366;
-        }
-
-        .contact-actions button.telegram {
-            color: #0088cc;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--gray);
-            grid-column: 1 / -1;
-        }
-
-        .empty-state i {
-            font-size: 60px;
-            margin-bottom: 20px;
-            color: #ddd;
-        }
-
-        .notification {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 15px 20px;
-            border-radius: 5px;
-            color: white;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .notification.show {
-            opacity: 1;
-        }
-
-        .notification.success {
-            background: var(--success);
-        }
-
-        .notification.error {
-            background: var(--danger);
-        }
-
-        .notification.warning {
-            background: var(--warning);
-        }
-
-        @media (max-width: 768px) {
-            .contacts-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .contact-actions {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .contact-actions button {
-                justify-content: center;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4a6fa5">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>دليل جهات الاتصال</h1>
-            <div class="sync-status" id="syncStatus">
-                <span>جاري التحميل...</span>
-                <i class="fas fa-sync-alt icon"></i>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">📱</div>
+                    <div class="logo-text">
+                        <h1 class="app-title">دليل جهات الاتصال </h1>
+                        <p class="app-subtitle">ادارة جهات اتصالك بذكاء</p>
+                    </div>
+                </div>
+                <div class="sync-status" id="syncStatus">
+                    <i class="fas fa-sync-alt status-icon"></i>
+                    <span class="status-text">جاري التحميل...</span>
+                </div>
             </div>
         </header>
 
-        <div class="controls">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="ابحث في جهات الاتصال...">
-                <button id="searchBtn">
-                    <i class="fas fa-search"></i>
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Search Section -->
+            <section class="search-section">
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" placeholder="ابحث عن جهة اتصال..." class="search-input">
+                        <button class="search-clear" id="clearSearch" aria-label="مسح البحث">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contacts Grid -->
+            <section class="contacts-section">
+                <div class="contacts-container" id="contactsContainer">
+                    <!-- سيتم تعبئة جهات الاتصال هنا ديناميكياً -->
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="action-btn sync-btn" id="manualSync" aria-label="مزامنة يدوية">
+                    <i class="fas fa-sync"></i>
                 </button>
             </div>
-        </div>
+        </main>
+    </div>
 
-        <div class="contacts-container" id="contactsContainer">
-            <!-- جهات الاتصال سيتم عرضها هنا -->
+    <!-- Notification System -->
+    <div class="notification-center" id="notificationCenter"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>جاري تحميل البيانات...</p>
         </div>
     </div>
 
-    <div class="notification" id="notification"></div>
-
-    <script>
-        // بيانات التطبيق
-        let contacts = [];
-        let filteredContacts = [];
-        let config = {
-            githubUrl: 'https://raw.githubusercontent.com/username/repo/main/contacts.xlsx', // ضع الرابط الافتراضي هنا
-            syncInterval: 60
-        };
-
-        // عناصر DOM
-        const contactsContainer = document.getElementById('contactsContainer');
-        const searchInput = document.getElementById('searchInput');
-        const searchBtn = document.getElementById('searchBtn');
-        const syncStatus = document.getElementById('syncStatus');
-        const notification = document.getElementById('notification');
-
-        // تهيئة التطبيق
-        document.addEventListener('DOMContentLoaded', function() {
-            loadConfig();
-            loadContacts();
-            setupEventListeners();
-            checkOnlineStatus();
-        });
-
-        // تحميل الإعدادات
-        function loadConfig() {
-            const savedConfig = localStorage.getItem('contactAppConfig');
-            if (savedConfig) {
-                config = JSON.parse(savedConfig);
-            } else {
-                // استخدام الإعدادات الافتراضية
-                localStorage.setItem('contactAppConfig', JSON.stringify(config));
-            }
-        }
-
-        // تحميل جهات الاتصال من التخزين المحلي
-        function loadContacts() {
-            const savedContacts = localStorage.getItem('contactAppContacts');
-            if (savedContacts) {
-                contacts = JSON.parse(savedContacts);
-                filteredContacts = [...contacts];
-                renderContacts();
-                updateSyncStatus('تم تحميل البيانات من الذاكرة المؤقتة', 'success');
-            } else {
-                contactsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-address-book"></i>
-                        <h3>لا توجد جهات اتصال</h3>
-                        <p>جاري تحميل البيانات...</p>
-                    </div>
-                `;
-                
-                // محاولة تحميل البيانات من GitHub إذا لم توجد بيانات محلية
-                if (config.githubUrl) {
-                    syncContacts();
-                }
-            }
-        }
-
-        // عرض جهات الاتصال
-        function renderContacts() {
-            if (filteredContacts.length === 0) {
-                contactsContainer.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-search"></i>
-                        <h3>لا توجد نتائج</h3>
-                        <p>جرب مصطلحات بحث مختلفة</p>
-                    </div>
-                `;
-                return;
-            }
-
-            contactsContainer.innerHTML = filteredContacts.map(contact => `
-                <div class="contact-card">
-                    <div class="contact-header">
-                        <div class="contact-name">${contact.name || ''} ${contact.lastName || ''}</div>
-                    </div>
-                    <div class="contact-info">
-                        <div class="contact-field">
-                            <i class="fas fa-phone"></i>
-                            <span>${contact.phone || 'غير محدد'}</span>
-                        </div>
-                        <div class="contact-field">
-                            <i class="fab fa-whatsapp"></i>
-                            <span>${contact.whatsapp || 'غير محدد'}</span>
-                        </div>
-                        <div class="contact-field">
-                            <i class="fab fa-telegram"></i>
-                            <span>${contact.telegram || 'غير محدد'}</span>
-                        </div>
-                        <div class="contact-field">
-                            <i class="fas fa-home"></i>
-                            <span>${contact.address || 'غير محدد'}</span>
-                        </div>
-                    </div>
-                    <div class="contact-actions">
-                        ${contact.phone ? `<button onclick="callNumber('${contact.phone}')">
-                            <i class="fas fa-phone"></i> اتصل
-                        </button>` : ''}
-                        ${contact.whatsapp ? `<button class="whatsapp" onclick="openWhatsApp('${contact.whatsapp}')">
-                            <i class="fab fa-whatsapp"></i> واتساب
-                        </button>` : ''}
-                        ${contact.telegram ? `<button class="telegram" onclick="openTelegram('${contact.telegram}')">
-                            <i class="fab fa-telegram"></i> تيليجرام
-                        </button>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // البحث في جهات الاتصال
-        function searchContacts() {
-            const searchTerm = searchInput.value.toLowerCase().trim();
-            if (!searchTerm) {
-                filteredContacts = [...contacts];
-            } else {
-                filteredContacts = contacts.filter(contact => 
-                    (contact.name && contact.name.toLowerCase().includes(searchTerm)) ||
-                    (contact.lastName && contact.lastName.toLowerCase().includes(searchTerm)) ||
-                    (contact.phone && contact.phone.includes(searchTerm)) ||
-                    (contact.whatsapp && contact.whatsapp.includes(searchTerm)) ||
-                    (contact.telegram && contact.telegram.includes(searchTerm)) ||
-                    (contact.address && contact.address.toLowerCase().includes(searchTerm))
-                );
-            }
-            renderContacts();
-        }
-
-        // مزامنة جهات الاتصال من GitHub
-        async function syncContacts() {
-            if (!config.githubUrl) {
-                showNotification('لم يتم إعداد رابط GitHub', 'warning');
-                return;
-            }
-
-            updateSyncStatus('جاري المزامنة...', 'warning');
-            
-            try {
-                // تحويل رابط GitHub إلى رابط raw
-                const rawUrl = config.githubUrl
-                    .replace('github.com', 'raw.githubusercontent.com')
-                    .replace('/blob/', '/');
-                
-                const response = await fetch(rawUrl);
-                if (!response.ok) throw new Error('فشل في تحميل الملف');
-                
-                const arrayBuffer = await response.arrayBuffer();
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                
-                // افتراض أن البيانات في الورقة الأولى
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                
-                // تحويل البيانات إلى تنسيق التطبيق (بدون اللقب الوظيفي)
-                contacts = jsonData.map(row => ({
-                    name: row['الاسم'] || row['name'] || '',
-                    lastName: row['اللقب'] || row['lastName'] || row['lastname'] || '',
-                    phone: row['رقم الهاتف'] || row['phone'] || row['Phone'] || '',
-                    whatsapp: row['رقم الواتساب'] || row['whatsapp'] || row['WhatsApp'] || '',
-                    telegram: row['حساب التليجرام'] || row['telegram'] || row['Telegram'] || '',
-                    address: row['العنوان'] || row['address'] || row['Address'] || ''
-                }));
-                
-                // حفظ البيانات محلياً
-                localStorage.setItem('contactAppContacts', JSON.stringify(contacts));
-                filteredContacts = [...contacts];
-                
-                renderContacts();
-                updateSyncStatus('تمت المزامنة بنجاح', 'success');
-                showNotification(`تم تحميل ${contacts.length} جهة اتصال`, 'success');
-                
-                // حفظ وقت آخر مزامنة
-                localStorage.setItem('contactAppLastSync', new Date().toISOString());
-                
-            } catch (error) {
-                console.error('خطأ في المزامنة:', error);
-                updateSyncStatus('فشلت المزامنة', 'error');
-                
-                // إذا فشلت المزامنة، استخدم البيانات المحلية إذا كانت موجودة
-                const savedContacts = localStorage.getItem('contactAppContacts');
-                if (savedContacts) {
-                    contacts = JSON.parse(savedContacts);
-                    filteredContacts = [...contacts];
-                    renderContacts();
-                    showNotification('تم تحميل البيانات من الذاكرة المحلية', 'warning');
-                } else {
-                    showNotification('فشل في تحميل البيانات: ' + error.message, 'error');
-                }
-            }
-        }
-
-        // تحديث حالة المزامنة
-        function updateSyncStatus(message, type) {
-            syncStatus.innerHTML = `
-                <span>${message}</span>
-                <i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'sync-alt' : 'exclamation-triangle'} icon"></i>
-            `;
-            
-            syncStatus.className = 'sync-status';
-            if (type === 'error') syncStatus.classList.add('offline');
-        }
-
-        // التحقق من حالة الاتصال
-        function checkOnlineStatus() {
-            if (navigator.onLine) {
-                // إذا كان هناك اتصال، تحقق من الحاجة للمزامنة
-                const lastSync = localStorage.getItem('contactAppLastSync');
-                if (lastSync) {
-                    const lastSyncTime = new Date(lastSync);
-                    const now = new Date();
-                    const diffMinutes = (now - lastSyncTime) / (1000 * 60);
-                    
-                    if (diffMinutes > config.syncInterval) {
-                        syncContacts();
-                    } else {
-                        updateSyncStatus('آخر مزامنة: ' + formatTime(lastSyncTime), 'success');
-                    }
-                } else {
-                    // إذا لم تكن هناك مزامنة سابقة، قم بالمزامنة الآن
-                    syncContacts();
-                }
-            } else {
-                updateSyncStatus('غير متصل بالإنترنت', 'error');
-            }
-        }
-
-        // تنسيق الوقت
-        function formatTime(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('ar-EG');
-        }
-
-        // إظهار الإشعارات
-        function showNotification(message, type) {
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        // إعداد مستمعي الأحداث
-        function setupEventListeners() {
-            searchBtn.addEventListener('click', searchContacts);
-            searchInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') searchContacts();
-            });
-            
-            // استمع لتغيرات حالة الاتصال
-            window.addEventListener('online', checkOnlineStatus);
-            window.addEventListener('offline', () => {
-                updateSyncStatus('غير متصل بالإنترنت', 'error');
-            });
-        }
-
-        // وظائف الاتصال
-        function callNumber(phone) {
-            window.open(`tel:${phone}`);
-        }
-
-        function openWhatsApp(whatsapp) {
-            window.open(`https://wa.me/${whatsapp}`);
-        }
-
-        function openTelegram(telegram) {
-            window.open(`https://t.me/${telegram.replace('@', '')}`);
-        }
-    </script>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
