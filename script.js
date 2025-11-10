@@ -80,6 +80,38 @@ class SmartContactApp {
                 e.target.closest('.notification').remove();
             }
         });
+
+        // Event delegation للأزرار الديناميكية
+        this.elements.contactsContainer.addEventListener('click', (e) => {
+            this.handleDynamicActions(e);
+        });
+    }
+
+    handleDynamicActions(event) {
+        const target = event.target;
+        
+        // التعامل مع أزرار النسخ
+        if (target.closest('.copy-btn-small')) {
+            const button = target.closest('.copy-btn-small');
+            const value = button.getAttribute('data-copy-value');
+            const label = button.getAttribute('data-copy-label');
+            if (value) {
+                this.copyToClipboard(value, label);
+            }
+            return;
+        }
+        
+        // التعامل مع أزرار الاتصال
+        if (target.closest('.action-btn-horizontal:not(.disabled)')) {
+            const button = target.closest('.action-btn-horizontal');
+            const type = button.getAttribute('data-action-type');
+            const value = button.getAttribute('data-action-value');
+            
+            if (type && value) {
+                this.handleAction(type, value);
+            }
+            return;
+        }
     }
 
     initScrollHeader() {
@@ -271,7 +303,7 @@ class SmartContactApp {
                 };
 
                 const contact = {
-                    id: `contact-${Date.now()}-${index}`,
+                    id: `contact-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
                     name: findValue(columnMappings.name),
                     lastName: findValue(columnMappings.lastName),
                     phone: this.cleanPhoneNumber(findValue(columnMappings.phone)),
@@ -293,14 +325,46 @@ class SmartContactApp {
 
     cleanPhoneNumber(phone) {
         if (!phone) return '';
-        // إزالة جميع الأحرف غير الرقمية باستثناء علامة +
-        return phone.replace(/[^\d+]/g, '');
+        // تنظيف الرقم - إزالة جميع المسافات والرموز غير المرغوب فيها
+        let cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
+        
+        // إذا بدأ بـ 00 استبدلها بـ +
+        if (cleaned.startsWith('00')) {
+            cleaned = '+' + cleaned.substring(2);
+        }
+        
+        // إذا بدأ بـ 0 بدون رمز الدولة، افترض أنها سوريا (+963)
+        if (cleaned.startsWith('0') && !cleaned.startsWith('+')) {
+            cleaned = '+963' + cleaned.substring(1);
+        }
+        
+        // التحقق من صحة الرقم النهائي
+        const phoneRegex = /^[\+]?[0-9]{10,15}$/;
+        if (!phoneRegex.test(cleaned)) {
+            console.warn('Invalid phone number format:', phone);
+            return '';
+        }
+        
+        return cleaned;
     }
 
     cleanTelegramUsername(username) {
         if (!username) return '';
-        // إزالة @ من بداية اسم المستخدم
-        return username.replace(/^@+/, '');
+        
+        // تنظيف اسم المستخدم من الرموز غير المرغوب فيها
+        let cleaned = username
+            .replace(/^@+/, '') // إزالة @ من البداية
+            .replace(/[^a-zA-Z0-9_]/g, '') // إزالة الرموز غير المسموحة
+            .trim();
+        
+        // التحقق من صحة اسم المستخدم
+        const telegramPattern = /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/;
+        if (!telegramPattern.test(cleaned)) {
+            console.warn('Invalid Telegram username:', username);
+            return '';
+        }
+        
+        return cleaned;
     }
 
     searchContacts() {
@@ -352,10 +416,11 @@ class SmartContactApp {
     getContactCardHTML(contact) {
         const firstLetter = (contact.name || contact.lastName || '?').charAt(0).toUpperCase();
         const displayName = `${contact.name || ''} ${contact.lastName || ''}`.trim() || 'بدون اسم';
+        const contactId = this.escapeHtmlAttribute(contact.id);
         
         return `
-        <div class="contact-card" data-contact-id="${contact.id}">
-            <div class="contact-avatar" aria-label="صورة ${displayName}">
+        <div class="contact-card" data-contact-id="${contactId}">
+            <div class="contact-avatar" aria-label="صورة ${this.escapeHtml(displayName)}">
                 ${firstLetter}
             </div>
             
@@ -381,15 +446,19 @@ class SmartContactApp {
     getContactFieldHTML(icon, value, label, displayValue = null) {
         if (!value) return '';
         
-        const display = displayValue || value;
+        const safeValue = this.escapeHtmlAttribute(value);
+        const safeLabel = this.escapeHtmlAttribute(label);
+        const display = this.escapeHtml(displayValue || value);
+        
         return `
         <div class="contact-field-horizontal">
             <i class="${icon}" aria-hidden="true"></i>
             <div class="contact-field-content">
-                <span>${this.escapeHtml(display)}</span>
+                <span>${display}</span>
                 <button class="copy-btn-small" 
-                        onclick="app.copyToClipboard('${this.escapeHtml(value)}', '${label}')"
-                        aria-label="نسخ ${label}">
+                        data-copy-value="${safeValue}"
+                        data-copy-label="${safeLabel}"
+                        aria-label="نسخ ${safeLabel}">
                     <i class="fas fa-copy"></i>
                 </button>
             </div>
@@ -399,23 +468,28 @@ class SmartContactApp {
 
     getActionButtonHTML(type, text, icon, value) {
         const isDisabled = !value;
-        const ariaLabel = isDisabled ? `${text} غير متاح` : `${text} ${this.getActionLabel(type, value)}`;
+        const safeValue = value ? this.escapeHtmlAttribute(value) : '';
+        const safeType = this.escapeHtmlAttribute(type);
+        const ariaLabel = this.escapeHtmlAttribute(
+            isDisabled ? `${text} غير متاح` : `${this.getActionLabel(type, value)}`
+        );
         
         return `
-        <button class="action-btn-horizontal ${type} ${isDisabled ? 'disabled' : ''}" 
-                ${isDisabled ? 'disabled' : `onclick="app.handleAction('${type}', '${this.escapeHtml(value)}')"`}
+        <button class="action-btn-horizontal ${safeType} ${isDisabled ? 'disabled' : ''}" 
+                ${isDisabled ? 'disabled' : ''}
+                data-action-type="${safeType}"
+                data-action-value="${safeValue}"
                 aria-label="${ariaLabel}">
             <i class="${icon}"></i>
-            <span>${text}</span>
         </button>
         `;
     }
 
     getActionLabel(type, value) {
         switch (type) {
-            case 'call': return `للاتصال بالرقم ${value}`;
-            case 'whatsapp': return `للاتصال عبر واتساب بالرقم ${value}`;
-            case 'telegram': return `للاتصال عبر تيليجرام باسم ${value}`;
+            case 'call': return `اتصال بالرقم ${value}`;
+            case 'whatsapp': return `فتح واتساب للرقم ${value}`;
+            case 'telegram': return `فتح تيليجرام للحساب ${value}`;
             default: return '';
         }
     }
@@ -461,20 +535,77 @@ class SmartContactApp {
     }
 
     callNumber(phone) {
-        const telLink = `tel:${phone}`;
-        window.open(telLink, '_self');
+        try {
+            const telLink = `tel:${phone}`;
+            
+            // إنشاء رابط مؤقت والنقر عليه
+            const link = document.createElement('a');
+            link.href = telLink;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showNotification(`جاري الاتصال بالرقم ${phone}`, 'info', 2000);
+        } catch (error) {
+            console.error('Call error:', error);
+            this.showNotification('تعذر إجراء المكالمة', 'error');
+        }
     }
 
     openWhatsApp(whatsapp) {
-        const cleanNumber = whatsapp.replace(/[^\d+]/g, '');
-        const whatsappUrl = `https://wa.me/${cleanNumber}`;
-        window.open(whatsappUrl, '_blank');
+        try {
+            const cleanNumber = whatsapp.replace(/[^\d+]/g, '');
+            
+            // التحقق من صحة الرقم
+            if (!cleanNumber || cleanNumber.length < 10) {
+                this.showNotification('رقم واتساب غير صالح', 'error');
+                return;
+            }
+            
+            const whatsappUrl = `https://wa.me/${cleanNumber}`;
+            
+            // فتح في نافذة جديدة
+            const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+            
+            if (newWindow) {
+                newWindow.opener = null;
+            } else {
+                // إذا تم منع النافذة المنبثقة، استخدم الرابط المباشر
+                this.showNotification('الرجاء السماح بالنوافذ المنبثقة لفتح واتساب', 'info');
+                window.location.href = whatsappUrl;
+            }
+            
+            this.showNotification(`جاري فتح واتساب للرقم ${cleanNumber}`, 'info', 2000);
+        } catch (error) {
+            console.error('WhatsApp open error:', error);
+            this.showNotification('تعذر فتح واتساب', 'error');
+        }
     }
 
     openTelegram(telegram) {
-        const cleanUsername = telegram.replace(/[@]/g, '');
-        const telegramUrl = `https://t.me/${cleanUsername}`;
-        window.open(telegramUrl, '_blank');
+        try {
+            const cleanUsername = telegram.replace(/^@+/, '');
+            
+            // استخدام رابط ويب Telegram الآمن
+            const telegramUrl = `https://web.telegram.org/k/#@${cleanUsername}`;
+            
+            // فتح في نافذة جديدة
+            const newWindow = window.open(telegramUrl, '_blank', 'noopener,noreferrer');
+            
+            if (newWindow) {
+                newWindow.opener = null;
+            } else {
+                // إذا تم منع النافذة المنبثقة، استخدم الرابط المباشر
+                this.showNotification('الرجاء السماح بالنوافذ المنبثقة لفتح Telegram', 'info');
+                window.location.href = telegramUrl;
+            }
+            
+            this.showNotification(`جاري فتح تيليجرام للحساب @${cleanUsername}`, 'info', 2000);
+        } catch (error) {
+            console.error('Telegram open error:', error);
+            this.showNotification('تعذر فتح تيليجرام', 'error');
+        }
     }
 
     async copyToClipboard(text, label) {
@@ -485,20 +616,28 @@ class SmartContactApp {
             this.showNotification(`تم نسخ ${label}`, 'success', 2000);
         } catch (error) {
             // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.select();
-            
             try {
-                document.execCommand('copy');
-                this.showNotification(`تم نسخ ${label}`, 'success', 2000);
-            } catch (fallbackError) {
-                this.showNotification('فشل نسخ النص', 'error');
-            } finally {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                const successful = document.execCommand('copy');
                 document.body.removeChild(textArea);
+                
+                if (successful) {
+                    this.showNotification(`تم نسخ ${label}`, 'success', 2000);
+                } else {
+                    throw new Error('Copy command failed');
+                }
+            } catch (fallbackError) {
+                console.error('Copy fallback error:', fallbackError);
+                this.showNotification('فشل نسخ النص', 'error');
             }
         }
     }
@@ -516,15 +655,18 @@ class SmartContactApp {
     }
 
     showNotification(message, type = 'info', duration = 5000) {
+        const safeMessage = this.escapeHtml(message);
+        const safeType = this.escapeHtmlAttribute(type);
+        
         const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
+        notification.className = `notification notification-${safeType}`;
         notification.setAttribute('role', 'alert');
         notification.setAttribute('aria-live', 'polite');
         
         notification.innerHTML = `
-            <i class="fas fa-${this.getNotificationIcon(type)}"></i>
-            <div>${message}</div>
-            <button class="notification-close" onclick="this.parentElement.remove()" aria-label="إغلاق">
+            <i class="fas fa-${this.getNotificationIcon(safeType)}"></i>
+            <div>${safeMessage}</div>
+            <button class="notification-close" aria-label="إغلاق">
                 <i class="fas fa-times"></i>
             </button>
         `;
@@ -533,6 +675,13 @@ class SmartContactApp {
         
         // إضافة animation
         setTimeout(() => notification.classList.add('show'), 10);
+        
+        // إضافة حدث إغلاق للإشعار
+        const closeBtn = notification.querySelector('.notification-close');
+        closeBtn.addEventListener('click', () => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        });
         
         // الإزالة التلقائية
         if (duration > 0) {
@@ -617,11 +766,28 @@ class SmartContactApp {
     }
 
     escapeHtml(text) {
-        if (typeof text !== 'string') return text;
+        if (text === null || text === undefined) {
+            return '';
+        }
         
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        const textString = String(text);
+        const escapeMap = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#x27;',
+            '/': '&#x2F;',
+            '`': '&#x60;',
+            '=': '&#x3D;'
+        };
+        
+        return textString.replace(/[&<>"'`=\/]/g, (char) => escapeMap[char]);
+    }
+
+    escapeHtmlAttribute(unsafeText) {
+        const escaped = this.escapeHtml(unsafeText);
+        return escaped.replace(/ /g, '&#32;');
     }
 
     // تنظيف الذاكرة عند إغلاق الصفحة
