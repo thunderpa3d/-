@@ -14,18 +14,22 @@ function debounce(func, wait) {
     };
 }
 
-// التحقق من حالة المصادقة عند تحميل الصفحة
+// التحقق من حالة المصادقة بعد تحميل DOM بالكامل
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, checking authentication...');
-    const isAuthenticated = localStorage.getItem('appAuthenticated');
     
-    if (isAuthenticated === 'true') {
-        console.log('User authenticated, hiding password screen');
-        hidePasswordScreen();
-    } else {
-        console.log('User not authenticated, showing password screen');
-        showPasswordScreen();
-    }
+    // الانتظار قليلاً لضمان تحميل جميع العناصر
+    setTimeout(() => {
+        const isAuthenticated = localStorage.getItem('appAuthenticated');
+        
+        if (isAuthenticated === 'true') {
+            console.log('User authenticated, initializing app...');
+            initializeAppAfterAuth();
+        } else {
+            console.log('User not authenticated, showing password screen');
+            showPasswordScreen();
+        }
+    }, 100);
 });
 
 function checkPassword() {
@@ -62,18 +66,52 @@ function hidePasswordScreen() {
     console.log('Hiding password screen');
     const passwordScreen = document.getElementById('password-screen');
     const appContainer = document.querySelector('.app-container');
+    const dynamicBackground = document.querySelector('.dynamic-background');
+    const animatedParticles = document.querySelector('.animated-particles');
     
-    if (passwordScreen) passwordScreen.style.display = 'none';
-    if (appContainer) appContainer.style.display = 'block';
+    if (passwordScreen) {
+        passwordScreen.style.display = 'none';
+        console.log('Password screen hidden');
+    }
+    
+    if (appContainer) {
+        appContainer.style.display = 'block';
+        console.log('App container shown');
+    }
+    
+    if (dynamicBackground) {
+        dynamicBackground.style.display = 'block';
+    }
+    
+    if (animatedParticles) {
+        animatedParticles.style.display = 'block';
+    }
 }
 
 function showPasswordScreen() {
     console.log('Showing password screen');
     const passwordScreen = document.getElementById('password-screen');
     const appContainer = document.querySelector('.app-container');
+    const dynamicBackground = document.querySelector('.dynamic-background');
+    const animatedParticles = document.querySelector('.animated-particles');
     
-    if (passwordScreen) passwordScreen.style.display = 'flex';
-    if (appContainer) appContainer.style.display = 'none';
+    if (passwordScreen) {
+        passwordScreen.style.display = 'flex';
+        console.log('Password screen shown');
+    }
+    
+    if (appContainer) {
+        appContainer.style.display = 'none';
+        console.log('App container hidden');
+    }
+    
+    if (dynamicBackground) {
+        dynamicBackground.style.display = 'none';
+    }
+    
+    if (animatedParticles) {
+        animatedParticles.style.display = 'none';
+    }
 }
 
 function resetPassword() {
@@ -100,16 +138,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ========== تطبيق دليل الاتصال الذكي - مع إصلاح المزامنة ==========
+// ========== تطبيق دليل الاتصال الذكي ==========
 class SmartContactApp {
     constructor() {
         this.contacts = [];
         this.filteredContacts = [];
         this.config = {
-          githubUrl: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
-     syncInterval: 300000, // 5 دقائق
+            // مصادر بيانات متعددة مع CORS proxies
+            dataSources: [
+                {
+                    name: 'GitHub Raw Direct',
+                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
+                    proxy: false
+                },
+                {
+                    name: 'CORS Proxy 1',
+                    url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx'),
+                    proxy: false
+                },
+                {
+                    name: 'CORS Proxy 2', 
+                    url: 'https://corsproxy.io/?' + encodeURIComponent('https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx'),
+                    proxy: false
+                }
+            ],
+            syncInterval: 300000, // 5 دقائق
             maxRetries: 3,
-            retryDelay: 2000
+            retryDelay: 2000,
+            cacheTimeout: 300000
         };
         
         this.isLoading = false;
@@ -128,6 +184,8 @@ class SmartContactApp {
     }
 
     cacheElements() {
+        console.log('Caching DOM elements...');
+        
         this.elements = {
             contactsContainer: document.getElementById('contactsContainer'),
             searchInput: document.getElementById('searchInput'),
@@ -139,18 +197,29 @@ class SmartContactApp {
             appHeader: document.querySelector('.app-header')
         };
 
-        // التحقق من وجود العناصر الهامة
+        // التحقق من وجود العناصر الهامة وتسجيلها
+        for (const [key, element] of Object.entries(this.elements)) {
+            if (element) {
+                console.log(`✅ Element found: ${key}`);
+            } else {
+                console.warn(`❌ Element not found: ${key}`);
+            }
+        }
+
         if (!this.elements.contactsContainer) {
-            console.error('Contacts container not found');
+            console.error('Contacts container not found - this will cause issues!');
         }
     }
 
     bindEvents() {
+        console.log('Binding events...');
+        
         // البحث مع Debounce
         if (this.elements.searchInput) {
             this.elements.searchInput.addEventListener('input', 
                 debounce(() => this.searchContacts(), 300)
             );
+            console.log('✅ Search input event bound');
         }
 
         if (this.elements.searchClear) {
@@ -161,6 +230,7 @@ class SmartContactApp {
                     this.elements.searchInput.focus();
                 }
             });
+            console.log('✅ Search clear event bound');
         }
 
         // المزامنة اليدوية
@@ -168,6 +238,7 @@ class SmartContactApp {
             this.elements.manualSync.addEventListener('click', 
                 () => this.syncWithGitHub(true)
             );
+            console.log('✅ Manual sync event bound');
         }
 
         // اكتشاف حالة الاتصال
@@ -192,7 +263,10 @@ class SmartContactApp {
             this.elements.contactsContainer.addEventListener('click', (e) => {
                 this.handleDynamicActions(e);
             });
+            console.log('✅ Contacts container events bound');
         }
+        
+        console.log('All events bound successfully');
     }
 
     handleDynamicActions(event) {
@@ -221,6 +295,8 @@ class SmartContactApp {
     }
 
     async loadApp() {
+        console.log('Loading application...');
+        
         if (this.isLoading) return;
         
         this.showLoading();
@@ -230,6 +306,7 @@ class SmartContactApp {
             this.renderContacts();
             
             if (navigator.onLine) {
+                this.showNotification('متصل بالإنترنت - جاري المزامنة...', 'info');
                 setTimeout(() => this.syncWithGitHub(), 1000);
             } else {
                 this.showNotification('التطبيق يعمل في الوضع غير المتصل', 'info');
@@ -556,9 +633,11 @@ class SmartContactApp {
 
     renderContacts() {
         if (!this.elements.contactsContainer) {
-            console.error('Contacts container not found');
+            console.error('Contacts container not found - cannot render contacts');
             return;
         }
+
+        console.log(`Rendering ${this.filteredContacts.length} contacts`);
 
         if (this.filteredContacts.length === 0) {
             this.elements.contactsContainer.innerHTML = this.getEmptyStateHTML();
@@ -721,7 +800,10 @@ class SmartContactApp {
     }
 
     showNotification(message, type = 'info', duration = 5000) {
-        if (!this.elements.notificationCenter) return;
+        if (!this.elements.notificationCenter) {
+            console.warn('Notification center not found');
+            return;
+        }
         
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
@@ -832,20 +914,28 @@ class SmartContactApp {
 // ========== تهيئة التطبيق بعد المصادقة ==========
 function initializeAppAfterAuth() {
     console.log('Initializing application after authentication');
-    try {
-        window.app = new SmartContactApp();
-    } catch (error) {
-        console.error('Failed to initialize app:', error);
-        // عرض رسالة خطأ في الواجهة
-        const notificationCenter = document.getElementById('notificationCenter');
-        if (notificationCenter) {
-            const errorNotification = document.createElement('div');
-            errorNotification.className = 'notification notification-error';
-            errorNotification.innerHTML = `
-                <i class="fas fa-exclamation-circle"></i>
-                <div class="notification-content">خطأ في تحميل التطبيق</div>
-            `;
-            notificationCenter.appendChild(errorNotification);
+    
+    // التأكد أولاً من إخفاء شاشة كلمة المرور وإظهار المحتوى الرئيسي
+    hidePasswordScreen();
+    
+    // الانتظار قليلاً لضمان تحميل DOM
+    setTimeout(() => {
+        try {
+            window.app = new SmartContactApp();
+            console.log('✅ Application initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize app:', error);
+            // عرض رسالة خطأ في الواجهة
+            const notificationCenter = document.getElementById('notificationCenter');
+            if (notificationCenter) {
+                const errorNotification = document.createElement('div');
+                errorNotification.className = 'notification notification-error';
+                errorNotification.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <div class="notification-content">خطأ في تحميل التطبيق</div>
+                `;
+                notificationCenter.appendChild(errorNotification);
+            }
         }
-    }
+    }, 200);
 }
