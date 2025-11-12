@@ -144,33 +144,14 @@ class SmartContactApp {
         this.contacts = [];
         this.filteredContacts = [];
         this.config = {
-            // مصادر بيانات متعددة مع CORS proxies
-            dataSources: [
-                {
-                    name: 'GitHub Raw Direct',
-                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
-                    proxy: false
-                },
-                {
-                    name: 'CORS Proxy 1',
-                    url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx'),
-                    proxy: false
-                },
-                {
-                    name: 'CORS Proxy 2', 
-                    url: 'https://corsproxy.io/?' + encodeURIComponent('https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx'),
-                    proxy: false
-                }
-            ],
+            githubUrl: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
             syncInterval: 300000, // 5 دقائق
             maxRetries: 3,
-            retryDelay: 2000,
-            cacheTimeout: 300000
+            retryDelay: 2000
         };
         
         this.isLoading = false;
         this.retryCount = 0;
-        this.currentDataSourceIndex = 0;
         
         this.init();
     }
@@ -939,3 +920,4 @@ function initializeAppAfterAuth() {
         }
     }, 200);
 }
+
