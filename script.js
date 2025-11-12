@@ -144,7 +144,7 @@ class SmartContactApp {
         this.contacts = [];
         this.filteredContacts = [];
         this.config = {
-            githubUrl: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
+            githubUrl: 'https://raw.githubusercontent.com/thunderpa3d/-/CONTACTS.xlsx',
             syncInterval: 300000, // 5 دقائق
             maxRetries: 3,
             retryDelay: 2000
@@ -920,4 +920,5 @@ function initializeAppAfterAuth() {
         }
     }, 200);
 }
+
 
