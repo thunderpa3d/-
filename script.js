@@ -1,6 +1,30 @@
 // ========== نظام قفل كلمة المرور ==========
 const correctPassword = "60602025";
 
+// دوال المساعدة العامة
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
 // التحقق من حالة المصادقة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, checking authentication...');
@@ -8,13 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (isAuthenticated === 'true') {
         console.log('User authenticated, hiding password screen');
-        document.getElementById('password-screen').style.display = 'none';
-        document.querySelector('.app-container').style.display = 'block';
-        initializeAppAfterAuth();
+        hidePasswordScreen();
     } else {
         console.log('User not authenticated, showing password screen');
-        document.getElementById('password-screen').style.display = 'flex';
-        document.querySelector('.app-container').style.display = 'none';
+        showPasswordScreen();
     }
 });
 
@@ -22,32 +43,60 @@ function checkPassword() {
     const input = document.getElementById('password-input').value;
     const errorElement = document.getElementById('error-message');
     
+    if (!errorElement) {
+        console.error('Error element not found');
+        return;
+    }
+    
     console.log('Password check triggered, input:', input);
     
     if (input === correctPassword) {
         console.log('Password correct, authenticating user');
         localStorage.setItem('appAuthenticated', 'true');
-        document.getElementById('password-screen').style.display = 'none';
-        document.querySelector('.app-container').style.display = 'block';
+        hidePasswordScreen();
         initializeAppAfterAuth();
     } else {
         console.log('Password incorrect');
         errorElement.textContent = 'كلمة المرور غير صحيحة!';
-        document.getElementById('password-input').value = '';
-        document.getElementById('password-input').style.animation = 'shake 0.5s';
-        setTimeout(() => {
-            document.getElementById('password-input').style.animation = '';
-        }, 500);
+        const passwordInput = document.getElementById('password-input');
+        if (passwordInput) {
+            passwordInput.value = '';
+            passwordInput.style.animation = 'shake 0.5s';
+            setTimeout(() => {
+                passwordInput.style.animation = '';
+            }, 500);
+        }
     }
+}
+
+function hidePasswordScreen() {
+    console.log('Hiding password screen');
+    const passwordScreen = document.getElementById('password-screen');
+    const appContainer = document.querySelector('.app-container');
+    
+    if (passwordScreen) passwordScreen.style.display = 'none';
+    if (appContainer) appContainer.style.display = 'block';
+}
+
+function showPasswordScreen() {
+    console.log('Showing password screen');
+    const passwordScreen = document.getElementById('password-screen');
+    const appContainer = document.querySelector('.app-container');
+    
+    if (passwordScreen) passwordScreen.style.display = 'flex';
+    if (appContainer) appContainer.style.display = 'none';
 }
 
 function resetPassword() {
     console.log('Resetting password authentication');
     localStorage.removeItem('appAuthenticated');
-    document.getElementById('password-screen').style.display = 'flex';
-    document.querySelector('.app-container').style.display = 'none';
-    document.getElementById('password-input').value = '';
-    document.getElementById('error-message').textContent = '';
+    showPasswordScreen();
+    
+    const passwordInput = document.getElementById('password-input');
+    const errorMessage = document.getElementById('error-message');
+    
+    if (passwordInput) passwordInput.value = '';
+    if (errorMessage) errorMessage.textContent = '';
 }
 
 // السماح باستخدام زر Enter لإدخال كلمة المرور
@@ -62,13 +111,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ========== تطبيق دليل الاتصال الذكي - الإصدار المحسن ==========
+// ========== تطبيق دليل الاتصال الذكي ==========
 class SmartContactApp {
     constructor() {
         this.contacts = [];
         this.filteredContacts = [];
         this.config = {
-            // روابط متعددة مع CORS proxies
             dataSources: [
                 {
                     url: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
@@ -77,16 +125,12 @@ class SmartContactApp {
                 {
                     url: 'https://raw.githubusercontent.com/thunderpa3d/-/main/contacts.xlsx',
                     proxy: true
-                },
-                {
-                    url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx'),
-                    proxy: false
                 }
             ],
-            syncInterval: 300000, // 5 دقائق
+            syncInterval: 300000,
             maxRetries: 3,
             retryDelay: 2000,
-            cacheTimeout: 300000 // 5 دقائق للكاش
+            cacheTimeout: 300000
         };
         
         this.isLoading = false;
@@ -96,71 +140,16 @@ class SmartContactApp {
         this.init();
     }
 
-    // ========== دوال المساعدة ==========
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    throttle(func, limit) {
-        let inThrottle;
-        return function(...args) {
-            if (!inThrottle) {
-                func.apply(this, args);
-                inThrottle = true;
-                setTimeout(() => inThrottle = false, limit);
-            }
-        };
-    }
-
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    escapeHtml(text) {
-        if (text === null || text === undefined) {
-            return '';
-        }
-        
-        const textString = String(text);
-        const escapeMap = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#x27;',
-            '/': '&#x2F;',
-            '`': '&#x60;',
-            '=': '&#x3D;'
-        };
-        
-        return textString.replace(/[&<>"'`=\/]/g, (char) => escapeMap[char]);
-    }
-
-    escapeHtmlAttribute(unsafeText) {
-        const escaped = this.escapeHtml(unsafeText);
-        return escaped.replace(/ /g, '&#32;');
-    }
-
-    // ========== دوال التهيئة ==========
     init() {
         console.log('Initializing SmartContactApp');
         this.cacheElements();
         this.bindEvents();
-        this.initScrollHeader();
         this.loadApp();
         this.startAutoSync();
     }
 
     cacheElements() {
-        const elements = {
+        this.elements = {
             contactsContainer: document.getElementById('contactsContainer'),
             searchInput: document.getElementById('searchInput'),
             notificationCenter: document.getElementById('notificationCenter'),
@@ -171,28 +160,30 @@ class SmartContactApp {
             appHeader: document.querySelector('.app-header')
         };
 
-        for (const [key, element] of Object.entries(elements)) {
-            if (!element) {
-                console.warn(`Element not found: ${key}`);
-            }
+        // التحقق من وجود العناصر الهامة
+        if (!this.elements.contactsContainer) {
+            console.error('Contacts container not found');
         }
-
-        this.elements = elements;
+        if (!this.elements.searchInput) {
+            console.warn('Search input not found');
+        }
     }
 
     bindEvents() {
         // البحث مع Debounce
         if (this.elements.searchInput) {
             this.elements.searchInput.addEventListener('input', 
-                this.debounce(() => this.searchContacts(), 300)
+                debounce(() => this.searchContacts(), 300)
             );
         }
 
         if (this.elements.searchClear) {
             this.elements.searchClear.addEventListener('click', () => {
-                this.elements.searchInput.value = '';
-                this.searchContacts();
-                this.elements.searchInput.focus();
+                if (this.elements.searchInput) {
+                    this.elements.searchInput.value = '';
+                    this.searchContacts();
+                    this.elements.searchInput.focus();
+                }
             });
         }
 
@@ -228,31 +219,6 @@ class SmartContactApp {
         }
     }
 
-    // ========== دوال التنقل والواجهة ==========
-    initScrollHeader() {
-        this.lastScrollY = window.scrollY;
-        this.headerHeight = this.elements.appHeader.offsetHeight;
-        
-        window.addEventListener('scroll', 
-            this.throttle(() => this.handleScroll(), 100)
-        );
-    }
-
-    handleScroll() {
-        const currentScrollY = window.scrollY;
-        const scrollDelta = currentScrollY - this.lastScrollY;
-
-        if (currentScrollY <= 0) {
-            this.elements.appHeader.style.transform = 'translateY(0)';
-        } else if (scrollDelta > 5 && currentScrollY > this.headerHeight) {
-            this.elements.appHeader.style.transform = 'translateY(-100%)';
-        } else if (scrollDelta < -5) {
-            this.elements.appHeader.style.transform = 'translateY(0)';
-        }
-
-        this.lastScrollY = currentScrollY;
-    }
-
     handleDynamicActions(event) {
         const target = event.target;
         
@@ -278,7 +244,6 @@ class SmartContactApp {
         }
     }
 
-    // ========== دوال إدارة البيانات ==========
     async loadApp() {
         if (this.isLoading) return;
         
@@ -319,7 +284,6 @@ class SmartContactApp {
                 }
             } else {
                 this.showNotification('لا توجد بيانات محلية، جاري التحميل...', 'info');
-                // تحميل بيانات تجريبية إذا لم توجد بيانات محلية
                 this.loadSampleData();
             }
         } catch (error) {
@@ -328,7 +292,6 @@ class SmartContactApp {
         }
     }
 
-    // ========== دوال المزامنة ==========
     async syncWithGitHub(force = false) {
         if (!navigator.onLine) {
             this.showNotification('غير متصل بالإنترنت', 'warning');
@@ -348,10 +311,9 @@ class SmartContactApp {
             let success = false;
             let lastError = null;
 
-            // تجربة جميع مصادر البيانات
             for (let i = 0; i < this.config.dataSources.length; i++) {
                 const dataSource = this.config.dataSources[this.currentDataSourceIndex];
-                console.log(`Trying data source: ${dataSource.url}, with proxy: ${dataSource.proxy}`);
+                console.log(`Trying data source: ${dataSource.url}`);
                 
                 try {
                     success = await this.fetchAndProcessData(dataSource);
@@ -360,7 +322,6 @@ class SmartContactApp {
                     lastError = error;
                     console.error(`Failed with data source ${dataSource.url}:`, error);
                     
-                    // الانتقال إلى المصدر التالي
                     this.currentDataSourceIndex = (this.currentDataSourceIndex + 1) % this.config.dataSources.length;
                     
                     if (i < this.config.dataSources.length - 1) {
@@ -384,11 +345,9 @@ class SmartContactApp {
             let errorMessage = 'فشل المزامنة - استخدام البيانات المحلية';
             
             if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-                errorMessage = 'مشكلة في الاتصال بالخادم - استخدام البيانات المحلية';
+                errorMessage = 'مشكلة في الاتصال بالخادم';
             } else if (error.message.includes('404')) {
-                errorMessage = 'ملف البيانات غير موجود على الخادم';
-            } else if (error.message.includes('network')) {
-                errorMessage = 'مشكلة في الاتصال بالإنترنت';
+                errorMessage = 'ملف البيانات غير موجود';
             }
             
             this.showNotification(errorMessage, 'error');
@@ -407,7 +366,6 @@ class SmartContactApp {
     async fetchAndProcessData(dataSource) {
         let url = dataSource.url;
         
-        // استخدام CORS proxy إذا كان مطلوبًا
         if (dataSource.proxy) {
             url = await this.getCorsProxyUrl(url);
         }
@@ -460,17 +418,11 @@ class SmartContactApp {
         return true;
     }
 
-    // دالة للحصول على CORS proxy URL
     async getCorsProxyUrl(originalUrl) {
-        // قائمة بـ CORS proxies مجانية
         const proxies = [
             `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`,
-            `https://corsproxy.io/?${encodeURIComponent(originalUrl)}`,
-            `https://cors-anywhere.herokuapp.com/${originalUrl}`,
-            `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(originalUrl)}`
+            `https://corsproxy.io/?${encodeURIComponent(originalUrl)}`
         ];
-
-        // إرجاع أول proxy (يمكن تطوير هذا لاختبار كل proxy)
         return proxies[0];
     }
 
@@ -506,12 +458,7 @@ class SmartContactApp {
                 return response;
             } catch (error) {
                 console.error(`Fetch attempt ${attempt} failed:`, error);
-                if (attempt === retries) {
-                    if (error.name === 'AbortError') {
-                        throw new Error('مهلة الاتصال انتهت');
-                    }
-                    throw error;
-                }
+                if (attempt === retries) throw error;
                 await this.delay(this.config.retryDelay);
             }
         }
@@ -521,11 +468,11 @@ class SmartContactApp {
         console.log('Processing Excel data, rows:', jsonData.length);
         
         const columnMappings = {
-            name: ['الاسم', 'name', 'اسم', 'اسم الجهة', 'جهة الاتصال', 'Contact Name', 'Name'],
-            lastName: ['اللقب', 'lastname', 'last name', 'لقب', 'الكنية', 'Last Name', 'LastName'],
-            phone: ['رقم الهاتف', 'phone', 'هاتف', 'تلفون', 'جوال', 'Phone', 'Mobile', 'الهاتف'],
-            whatsapp: ['واتساب', 'whatsapp', 'رقم الواتساب', 'WhatsApp', 'whats app'],
-            telegram: ['تليجرام', 'telegram', 'تيليجرام', 'حساب التليجرام', 'Telegram', 'tele'],
+            name: ['الاسم', 'name', 'اسم', 'اسم الجهة', 'جهة الاتصال'],
+            lastName: ['اللقب', 'lastname', 'last name', 'لقب', 'الكنية'],
+            phone: ['رقم الهاتف', 'phone', 'هاتف', 'تلفون', 'جوال'],
+            whatsapp: ['واتساب', 'whatsapp', 'رقم الواتساب', 'WhatsApp'],
+            telegram: ['تليجرام', 'telegram', 'تيليجرام', 'حساب التليجرام'],
         };
 
         const contacts = jsonData
@@ -547,7 +494,7 @@ class SmartContactApp {
                     };
 
                     const contact = {
-                        id: `contact-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+                        id: `contact-${Date.now()}-${index}`,
                         name: findValue(columnMappings.name),
                         lastName: findValue(columnMappings.lastName),
                         phone: this.cleanPhoneNumber(findValue(columnMappings.phone)),
@@ -555,13 +502,9 @@ class SmartContactApp {
                         telegram: this.cleanTelegramUsername(findValue(columnMappings.telegram)),
                     };
 
-                    if (contact.name || contact.phone) {
-                        console.log('Processed contact:', contact);
-                    }
-
                     return contact;
                 } catch (error) {
-                    console.error('Error processing row:', row, error);
+                    console.error('Error processing row:', error);
                     return null;
                 }
             })
@@ -569,7 +512,7 @@ class SmartContactApp {
                 contact && (contact.name || contact.lastName || contact.phone || contact.whatsapp || contact.telegram)
             );
 
-        console.log(`Successfully processed ${contacts.length} contacts from ${jsonData.length} rows`);
+        console.log(`Successfully processed ${contacts.length} contacts`);
         return contacts;
     }
 
@@ -578,7 +521,6 @@ class SmartContactApp {
         return text.toString()
             .toLowerCase()
             .replace(/\s+/g, '')
-            .replace(/[َُِّ٠-٩]/g, '')
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
     }
@@ -598,7 +540,6 @@ class SmartContactApp {
         
         const phoneRegex = /^[\+]?[1-9]\d{1,14}$/;
         if (!phoneRegex.test(cleaned) || cleaned.length < 10) {
-            console.warn('Invalid phone number format:', phone, 'cleaned:', cleaned);
             return '';
         }
         
@@ -613,17 +554,11 @@ class SmartContactApp {
             .replace(/[^a-zA-Z0-9_]/g, '')
             .trim();
         
-        if (cleaned.length < 5 || cleaned.length > 32) {
-            console.warn('Invalid Telegram username length:', username);
-            return '';
-        }
-        
         return cleaned;
     }
 
-    // ========== دوال العرض والواجهة ==========
     searchContacts() {
-        const searchTerm = this.elements.searchInput.value.trim();
+        const searchTerm = this.elements.searchInput?.value.trim() || '';
         
         if (!searchTerm) {
             this.filteredContacts = [...this.contacts];
@@ -649,17 +584,15 @@ class SmartContactApp {
     }
 
     renderContacts() {
-        const container = this.elements.contactsContainer;
-        
-        if (!container) {
+        if (!this.elements.contactsContainer) {
             console.error('Contacts container not found');
             return;
         }
 
         if (this.filteredContacts.length === 0) {
-            container.innerHTML = this.getEmptyStateHTML();
+            this.elements.contactsContainer.innerHTML = this.getEmptyStateHTML();
         } else {
-            container.innerHTML = this.filteredContacts
+            this.elements.contactsContainer.innerHTML = this.filteredContacts
                 .map(contact => this.getContactCardHTML(contact))
                 .join('');
         }
@@ -670,11 +603,10 @@ class SmartContactApp {
     getContactCardHTML(contact) {
         const firstLetter = (contact.name || contact.lastName || '?').charAt(0).toUpperCase();
         const displayName = `${contact.name || ''} ${contact.lastName || ''}`.trim() || 'بدون اسم';
-        const contactId = this.escapeHtmlAttribute(contact.id);
         
         return `
-        <div class="contact-card" data-contact-id="${contactId}">
-            <div class="contact-avatar" aria-label="صورة ${this.escapeHtml(displayName)}">
+        <div class="contact-card" data-contact-id="${contact.id}">
+            <div class="contact-avatar">
                 ${firstLetter}
             </div>
             
@@ -699,19 +631,16 @@ class SmartContactApp {
     getContactFieldHTML(icon, value, label, displayValue = null) {
         if (!value) return '';
         
-        const safeValue = this.escapeHtmlAttribute(value);
-        const safeLabel = this.escapeHtmlAttribute(label);
-        const display = this.escapeHtml(displayValue || value);
+        const display = displayValue || value;
         
         return `
         <div class="contact-field-horizontal">
-            <i class="${icon}" aria-hidden="true"></i>
+            <i class="${icon}"></i>
             <div class="contact-field-content">
-                <span>${display}</span>
+                <span>${this.escapeHtml(display)}</span>
                 <button class="copy-btn-small" 
-                        data-copy-value="${safeValue}"
-                        data-copy-label="${safeLabel}"
-                        aria-label="نسخ ${safeLabel}">
+                        data-copy-value="${value}"
+                        data-copy-label="${label}">
                     <i class="fas fa-copy"></i>
                 </button>
             </div>
@@ -721,39 +650,23 @@ class SmartContactApp {
 
     getActionButtonHTML(type, text, icon, value) {
         const isDisabled = !value;
-        const safeValue = value ? this.escapeHtmlAttribute(value) : '';
-        const safeType = this.escapeHtmlAttribute(type);
-        const ariaLabel = this.escapeHtmlAttribute(
-            isDisabled ? `${text} غير متاح` : `${this.getActionLabel(type, value)}`
-        );
         
         return `
-        <button class="action-btn-horizontal ${safeType} ${isDisabled ? 'disabled' : ''}" 
+        <button class="action-btn-horizontal ${type} ${isDisabled ? 'disabled' : ''}" 
                 ${isDisabled ? 'disabled' : ''}
-                data-action-type="${safeType}"
-                data-action-value="${safeValue}"
-                aria-label="${ariaLabel}">
+                data-action-type="${type}"
+                data-action-value="${value}">
             <i class="${icon}"></i>
         </button>
         `;
     }
 
-    getActionLabel(type, value) {
-        switch (type) {
-            case 'call': return `اتصال بالرقم ${value}`;
-            case 'whatsapp': return `فتح واتساب للرقم ${value}`;
-            case 'telegram': return `فتح تيليجرام للحساب ${value}`;
-            default: return '';
-        }
-    }
-
     getEmptyStateHTML() {
-        const hasSearch = this.elements.searchInput.value.trim();
+        const hasSearch = this.elements.searchInput?.value.trim() || '';
         
         return `
         <div class="empty-state">
-            <i class="fas fa-${hasSearch ? 'search' : 'users'}" 
-               aria-hidden="true"></i>
+            <i class="fas fa-${hasSearch ? 'search' : 'users'}"></i>
             <h3>${hasSearch ? 'لا توجد نتائج' : 'لا توجد جهات اتصال'}</h3>
             <p>${hasSearch ? 'جرب مصطلحات بحث مختلفة' : 'قم بالمزامنة لتحميل جهات الاتصال'}</p>
             ${!hasSearch ? `<button class="sync-btn-large" onclick="app.syncWithGitHub(true)">
@@ -763,7 +676,6 @@ class SmartContactApp {
         `;
     }
 
-    // ========== دوال الإجراءات ==========
     handleAction(type, value) {
         if (!value) return;
 
@@ -779,8 +691,6 @@ class SmartContactApp {
                     this.openTelegram(value);
                     break;
             }
-            
-            this.logAction(type, value);
         } catch (error) {
             console.error('Action error:', error);
             this.showNotification('فشل تنفيذ الإجراء', 'error');
@@ -789,17 +699,9 @@ class SmartContactApp {
 
     callNumber(phone) {
         try {
-            const telLink = `tel:${phone}`;
-            const link = document.createElement('a');
-            link.href = telLink;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
+            window.location.href = `tel:${phone}`;
             this.showNotification(`جاري الاتصال بالرقم ${phone}`, 'info', 2000);
         } catch (error) {
-            console.error('Call error:', error);
             this.showNotification('تعذر إجراء المكالمة', 'error');
         }
     }
@@ -807,25 +709,9 @@ class SmartContactApp {
     openWhatsApp(whatsapp) {
         try {
             const cleanNumber = whatsapp.replace(/[^\d+]/g, '');
-            
-            if (!cleanNumber || cleanNumber.length < 10) {
-                this.showNotification('رقم واتساب غير صالح', 'error');
-                return;
-            }
-            
-            const whatsappUrl = `https://wa.me/${cleanNumber}`;
-            const newWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-            
-            if (newWindow) {
-                newWindow.opener = null;
-            } else {
-                this.showNotification('الرجاء السماح بالنوافذ المنبثقة لفتح واتساب', 'info');
-                window.location.href = whatsappUrl;
-            }
-            
-            this.showNotification(`جاري فتح واتساب للرقم ${cleanNumber}`, 'info', 2000);
+            window.open(`https://wa.me/${cleanNumber}`, '_blank');
+            this.showNotification(`جاري فتح واتساب`, 'info', 2000);
         } catch (error) {
-            console.error('WhatsApp open error:', error);
             this.showNotification('تعذر فتح واتساب', 'error');
         }
     }
@@ -833,19 +719,9 @@ class SmartContactApp {
     openTelegram(telegram) {
         try {
             const cleanUsername = telegram.replace(/^@+/, '');
-            const telegramUrl = `https://web.telegram.org/k/#@${cleanUsername}`;
-            const newWindow = window.open(telegramUrl, '_blank', 'noopener,noreferrer');
-            
-            if (newWindow) {
-                newWindow.opener = null;
-            } else {
-                this.showNotification('الرجاء السماح بالنوافذ المنبثقة لفتح Telegram', 'info');
-                window.location.href = telegramUrl;
-            }
-            
-            this.showNotification(`جاري فتح تيليجرام للحساب @${cleanUsername}`, 'info', 2000);
+            window.open(`https://web.telegram.org/k/#@${cleanUsername}`, '_blank');
+            this.showNotification(`جاري فتح تيليجرام`, 'info', 2000);
         } catch (error) {
-            console.error('Telegram open error:', error);
             this.showNotification('تعذر فتح تيليجرام', 'error');
         }
     }
@@ -857,33 +733,10 @@ class SmartContactApp {
             await navigator.clipboard.writeText(text);
             this.showNotification(`تم نسخ ${label}`, 'success', 2000);
         } catch (error) {
-            try {
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                textArea.style.position = 'fixed';
-                textArea.style.opacity = '0';
-                textArea.style.left = '-999999px';
-                textArea.style.top = '-999999px';
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                
-                const successful = document.execCommand('copy');
-                document.body.removeChild(textArea);
-                
-                if (successful) {
-                    this.showNotification(`تم نسخ ${label}`, 'success', 2000);
-                } else {
-                    throw new Error('Copy command failed');
-                }
-            } catch (fallbackError) {
-                console.error('Copy fallback error:', fallbackError);
-                this.showNotification('فشل نسخ النص', 'error');
-            }
+            this.showNotification('فشل نسخ النص', 'error');
         }
     }
 
-    // ========== دوال المساعدة العامة ==========
     updateContactsCount() {
         if (this.elements.contactsCount) {
             const total = this.contacts.length;
@@ -897,18 +750,15 @@ class SmartContactApp {
     }
 
     showNotification(message, type = 'info', duration = 5000) {
-        const safeMessage = this.escapeHtml(message);
-        const safeType = this.escapeHtmlAttribute(type);
+        if (!this.elements.notificationCenter) return;
         
         const notification = document.createElement('div');
-        notification.className = `notification notification-${safeType}`;
-        notification.setAttribute('role', 'alert');
-        notification.setAttribute('aria-live', 'polite');
+        notification.className = `notification notification-${type}`;
         
         notification.innerHTML = `
-            <i class="fas fa-${this.getNotificationIcon(safeType)}"></i>
-            <div class="notification-content">${safeMessage}</div>
-            <button class="notification-close" aria-label="إغلاق">
+            <i class="fas fa-${this.getNotificationIcon(type)}"></i>
+            <div class="notification-content">${message}</div>
+            <button class="notification-close">
                 <i class="fas fa-times"></i>
             </button>
         `;
@@ -919,23 +769,13 @@ class SmartContactApp {
         
         const closeBtn = notification.querySelector('.notification-close');
         closeBtn.addEventListener('click', () => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentElement) {
-                    notification.remove();
-                }
-            }, 300);
+            notification.remove();
         });
         
         if (duration > 0) {
             setTimeout(() => {
                 if (notification.parentElement) {
-                    notification.classList.remove('show');
-                    setTimeout(() => {
-                        if (notification.parentElement) {
-                            notification.remove();
-                        }
-                    }, 300);
+                    notification.remove();
                 }
             }, duration);
         }
@@ -952,13 +792,15 @@ class SmartContactApp {
     }
 
     showLoading() {
-        this.elements.loadingOverlay.classList.add('show');
-        this.elements.loadingOverlay.setAttribute('aria-hidden', 'false');
+        if (this.elements.loadingOverlay) {
+            this.elements.loadingOverlay.classList.add('show');
+        }
     }
 
     hideLoading() {
-        this.elements.loadingOverlay.classList.remove('show');
-        this.elements.loadingOverlay.setAttribute('aria-hidden', 'true');
+        if (this.elements.loadingOverlay) {
+            this.elements.loadingOverlay.classList.remove('show');
+        }
     }
 
     startAutoSync() {
@@ -975,7 +817,6 @@ class SmartContactApp {
             localStorage.setItem('smartContactApp_timestamp', Date.now().toString());
         } catch (error) {
             console.error('Save to localStorage error:', error);
-            this.showNotification('فشل حفظ البيانات محلياً', 'warning');
         }
     }
 
@@ -988,13 +829,6 @@ class SmartContactApp {
                 phone: '+963934096914',
                 whatsapp: '+963934096914',
                 telegram: 'TF3RAAD'
-            },
-            {
-                id: 'sample-2', 
-                name: 'محمد أحمد',
-                phone: '+963123456789',
-                whatsapp: '+963123456789',
-                telegram: 'mohammed_ahmed'
             }
         ];
         
@@ -1002,17 +836,19 @@ class SmartContactApp {
         this.filteredContacts = [...this.contacts];
         this.saveToLocalStorage();
         this.renderContacts();
-        this.showNotification('تم تحميل البيانات التجريبية', 'info');
+        this.showNotification('تم تحميل البيانات المحلية', 'info');
     }
 
-    logAction(type, value) {
-        console.log(`User action: ${type} - ${value}`);
+    // دوال المساعدة
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    destroy() {
-        window.removeEventListener('online', this.onlineHandler);
-        window.removeEventListener('offline', this.offlineHandler);
-        this.isLoading = false;
+    escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
@@ -1021,22 +857,8 @@ function initializeAppAfterAuth() {
     console.log('Initializing application after authentication');
     try {
         window.app = new SmartContactApp();
-        
-        window.addEventListener('beforeunload', () => {
-            if (window.app && typeof window.app.destroy === 'function') {
-                window.app.destroy();
-            }
-        });
     } catch (error) {
         console.error('Failed to initialize app:', error);
-        document.body.innerHTML = `
-            <div style="padding: 2rem; text-align: center; color: #ef4444;">
-                <h2>خطأ في تحميل التطبيق</h2>
-                <p>حدث خطأ غير متوقع. يرجى تحديث الصفحة.</p>
-                <button onclick="window.location.reload()" style="padding: 0.5rem 1rem; margin-top: 1rem;">
-                    تحديث الصفحة
-                </button>
-            </div>
-        `;
+        this.showNotification('خطأ في تحميل التطبيق', 'error');
     }
 }
