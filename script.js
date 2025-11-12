@@ -119,11 +119,11 @@ class SmartContactApp {
         this.config = {
             dataSources: [
                 {
-                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
+                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/CONTACTS.xlsx',
                     proxy: true
                 },
                 {
-                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/main/contacts.xlsx',
+                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/contacts.xlsx',
                     proxy: true
                 }
             ],
@@ -862,3 +862,4 @@ function initializeAppAfterAuth() {
         this.showNotification('خطأ في تحميل التطبيق', 'error');
     }
 }
+
