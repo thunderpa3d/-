@@ -14,17 +14,6 @@ function debounce(func, wait) {
     };
 }
 
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-}
-
 // التحقق من حالة المصادقة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, checking authentication...');
@@ -111,26 +100,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ========== تطبيق دليل الاتصال الذكي ==========
+// ========== تطبيق دليل الاتصال الذكي - مع إصلاح المزامنة ==========
 class SmartContactApp {
     constructor() {
         this.contacts = [];
         this.filteredContacts = [];
         this.config = {
-            dataSources: [
-                {
-                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/CONTACTS.xlsx',
-                    proxy: true
-                },
-                {
-                    url: 'https://raw.githubusercontent.com/thunderpa3d/-/contacts.xlsx',
-                    proxy: true
-                }
-            ],
-            syncInterval: 300000,
+          githubUrl: 'https://raw.githubusercontent.com/thunderpa3d/-/main/CONTACTS.xlsx',
+     syncInterval: 300000, // 5 دقائق
             maxRetries: 3,
-            retryDelay: 2000,
-            cacheTimeout: 300000
+            retryDelay: 2000
         };
         
         this.isLoading = false;
@@ -163,9 +142,6 @@ class SmartContactApp {
         // التحقق من وجود العناصر الهامة
         if (!this.elements.contactsContainer) {
             console.error('Contacts container not found');
-        }
-        if (!this.elements.searchInput) {
-            console.warn('Search input not found');
         }
     }
 
@@ -311,17 +287,22 @@ class SmartContactApp {
             let success = false;
             let lastError = null;
 
+            // تجربة جميع مصادر البيانات المتاحة
             for (let i = 0; i < this.config.dataSources.length; i++) {
                 const dataSource = this.config.dataSources[this.currentDataSourceIndex];
-                console.log(`Trying data source: ${dataSource.url}`);
+                console.log(`Trying data source: ${dataSource.name} - ${dataSource.url}`);
                 
                 try {
                     success = await this.fetchAndProcessData(dataSource);
-                    if (success) break;
+                    if (success) {
+                        console.log(`✅ Success with data source: ${dataSource.name}`);
+                        break;
+                    }
                 } catch (error) {
                     lastError = error;
-                    console.error(`Failed with data source ${dataSource.url}:`, error);
+                    console.error(`❌ Failed with data source ${dataSource.name}:`, error);
                     
+                    // الانتقال إلى المصدر التالي
                     this.currentDataSourceIndex = (this.currentDataSourceIndex + 1) % this.config.dataSources.length;
                     
                     if (i < this.config.dataSources.length - 1) {
@@ -345,9 +326,11 @@ class SmartContactApp {
             let errorMessage = 'فشل المزامنة - استخدام البيانات المحلية';
             
             if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-                errorMessage = 'مشكلة في الاتصال بالخادم';
+                errorMessage = 'مشكلة في الاتصال بالخادم - جاري استخدام البيانات المحلية';
             } else if (error.message.includes('404')) {
-                errorMessage = 'ملف البيانات غير موجود';
+                errorMessage = 'ملف البيانات غير موجود على الخادم';
+            } else if (error.message.includes('network')) {
+                errorMessage = 'مشكلة في الاتصال بالإنترنت';
             }
             
             this.showNotification(errorMessage, 'error');
@@ -364,13 +347,9 @@ class SmartContactApp {
     }
 
     async fetchAndProcessData(dataSource) {
-        let url = dataSource.url;
-        
-        if (dataSource.proxy) {
-            url = await this.getCorsProxyUrl(url);
-        }
+        console.log(`Fetching data from: ${dataSource.url}`);
 
-        const response = await this.fetchWithTimeout(url, {
+        const response = await this.fetchWithTimeout(dataSource.url, {
             timeout: 15000,
             retries: 2
         });
@@ -397,11 +376,11 @@ class SmartContactApp {
             raw: false
         });
         
+        console.log('Raw Excel data:', jsonData);
+        
         if (!jsonData || jsonData.length === 0) {
             throw new Error('الملف لا يحتوي على بيانات صالحة');
         }
-        
-        console.log('Raw Excel data:', jsonData);
         
         const processedData = this.processExcelData(jsonData);
         
@@ -416,14 +395,6 @@ class SmartContactApp {
         
         this.showNotification(`تم تحديث ${this.contacts.length} جهة اتصال`, 'success');
         return true;
-    }
-
-    async getCorsProxyUrl(originalUrl) {
-        const proxies = [
-            `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl)}`,
-            `https://corsproxy.io/?${encodeURIComponent(originalUrl)}`
-        ];
-        return proxies[0];
     }
 
     async fetchWithTimeout(url, options = {}) {
@@ -829,6 +800,12 @@ class SmartContactApp {
                 phone: '+963934096914',
                 whatsapp: '+963934096914',
                 telegram: 'TF3RAAD'
+            },
+            {
+                id: 'sample-2',
+                name: 'محمد أحمد',
+                phone: '+963123456789',
+                whatsapp: '+963123456789'
             }
         ];
         
@@ -859,7 +836,16 @@ function initializeAppAfterAuth() {
         window.app = new SmartContactApp();
     } catch (error) {
         console.error('Failed to initialize app:', error);
-        this.showNotification('خطأ في تحميل التطبيق', 'error');
+        // عرض رسالة خطأ في الواجهة
+        const notificationCenter = document.getElementById('notificationCenter');
+        if (notificationCenter) {
+            const errorNotification = document.createElement('div');
+            errorNotification.className = 'notification notification-error';
+            errorNotification.innerHTML = `
+                <i class="fas fa-exclamation-circle"></i>
+                <div class="notification-content">خطأ في تحميل التطبيق</div>
+            `;
+            notificationCenter.appendChild(errorNotification);
+        }
     }
 }
-
