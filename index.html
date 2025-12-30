@@ -3,91 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>دليل الاتصال الذكي</title>
-    <meta name="description" content="تطبيق دليل اتصال ذكي يعمل بدون إنترنت مع مزامنة تلقائية">
+    <title>📞 دليل الاتصال الذكي | Smart Contact Directory</title>
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-    <meta name="theme-color" content="#6366f1">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- SheetJS (for Excel files) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📱</text></svg>">
 </head>
 <body>
-    
-    <!-- شاشة كلمة المرور -->
-    <div id="password-screen">
-        <div class="password-container">
-            <h2>مرحباً بك في التطبيق</h2>
-            <p>يجب إدخال كلمة المرور للوصول إلى المحتوى</p>
-            <input type="password" id="password-input" placeholder="أدخل كلمة المرور هنا">
-            <button class="password-btn" onclick="checkPassword()">دخول إلى التطبيق</button>
-            <div id="error-message" class="error"></div>
+    <!-- ========== شاشة المصادقة ========== -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-container">
+            <!-- تصميم احترافي مع تأثيرات -->
+            <div class="auth-header">
+                <div class="auth-logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>النظام الآمن</h1>
+                </div>
+                <p class="auth-subtitle">دليل الاتصال الذكي </p>
+            </div>
+            
+            <div class="auth-body">
+                <div class="password-input-wrapper">
+                    <div class="input-group">
+                        <i class="fas fa-key input-icon"></i>
+                        <input 
+                            type="password" 
+                            id="password-input"
+                            class="password-input"
+                            placeholder="أدخل كلمة المرور..."
+                            autocomplete="off"
+                            autofocus
+                        >
+                        <button class="password-toggle" type="button">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                
+                <div id="auth-message" class="auth-message"></div>
+                
+                <div class="auth-actions">
+                    <button id="auth-submit" class="btn btn-primary btn-auth">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>الدخول لتطبيق</span>
+                    </button>
+                    
+                    <button id="auth-reset" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i>
+                        إعادة تعيين
+                    </button>
+                </div>
+                
+                <div class="auth-hint">
+                    <i class="fas fa-info-circle"></i>
+                    <small>كلمة المرور مطلوبة للوصول لقاعدة البيانات</small>
+                </div>
+            </div>
+            
+            <div class="auth-footer">
+                <div class="security-indicator">
+                    <i class="fas fa-lock"></i>
+                    <span>اتصال آمن مشفر</span>
+                </div>
+                <div class="version">الإصدار 2.0.1</div>
+            </div>
+        </div>
+        
+        <!-- خلفية متحركة -->
+        <div class="auth-background">
+            <div class="particles-container"></div>
+            <div class="floating-icons">
+                <i class="fas fa-phone"></i>
+                <i class="fas fa-address-book"></i>
+                <i class="fas fa-user-shield"></i>
+                <i class="fas fa-database"></i>
+            </div>
         </div>
     </div>
-    <!-- الخلفية المتحركة -->
-    <div class="dynamic-background"></div>
-    <div class="animated-particles"></div>
-
-    <div class="app-container">
+    
+    <!-- ========== التطبيق الرئيسي ========== -->
+    <div id="app-container" class="app-container">
+        <!-- Header -->
         <header class="app-header">
-            <div class="header-content">
-                <!-- العنوان والبحث في نفس الصف -->
-                <div class="header-main-section">
-                    <div class="app-title-container">
-                        <h1 class="app-title">دليل جهات الاتصال</h1>
-                        <div class="app-subtitle">مدير الاتصالات الذكي</div>
-                    </div>
+            <div class="header-left">
+                <div class="app-logo">
+                    <i class="fas fa-address-book"></i>
+                    <h1>دليل الاتصال الذكي</h1>
+                </div>
+                <div class="app-status">
+                    <span class="status-indicator online">
+                        <i class="fas fa-circle"></i>
+                        متصل
+                    </span>
+                    <span id="last-sync" class="last-sync">آخر تحديث: --</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input 
+                        type="text" 
+                        id="search-input"
+                        class="search-input"
+                        placeholder="ابحث عن جهة اتصال..."
+                        autocomplete="off"
+                    >
+                    <button id="search-clear" class="search-clear">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="header-actions">
+                    <button id="manual-sync" class="btn-icon" title="مزامنة يدوية">
+                        <i class="fas fa-sync-alt"></i>
+                        <span class="badge" id="sync-badge"></span>
+                    </button>
                     
-                    <!-- مربع البحث بجانب العنوان -->
-                    <div class="header-search-section">
-                        <div class="header-search-container">
-                            <div class="header-search-box">
-                                <input type="text" id="searchInput" placeholder="ابحث عن جهة اتصال..." class="header-search-input">
-                                <div class="header-search-icon">
-                                    <i class="fas fa-search"></i>
-                                </div>
-                                <div class="header-search-clear">
-                                    <i class="fas fa-times"></i>
-                                </div>
-                            </div>
+                    <button id="export-contacts" class="btn-icon" title="تصدير الجهات">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    
+                    <button id="app-settings" class="btn-icon" title="الإعدادات">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    
+                    <button id="logout-btn" class="btn-icon logout" title="تسجيل الخروج">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+                
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">مستخدم النظام</span>
+                        <span class="user-role">مشرف</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Statistics Cards -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon total">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-contacts">0</h3>
+                        <p>إجمالي الجهات</p>
+                    </div>
+                    <div class="stat-trend up">
+                        <i class="fas fa-arrow-up"></i>
+                        12%
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon phones">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-phones">0</h3>
+                        <p>أرقام الهواتف</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon whatsapp">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-whatsapp">0</h3>
+                        <p>حسابات واتساب</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon telegram">
+                        <i class="fab fa-telegram"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="total-telegram">0</h3>
+                        <p>حسابات تليجرام</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacts Container -->
+            <div class="contacts-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-address-card"></i> جهات الاتصال</h2>
+                    <div class="section-actions">
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="grid">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="view-btn" data-view="list">
+                                <i class="fas fa-list"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="filter-dropdown">
+                            <button class="filter-btn">
+                                <i class="fas fa-filter"></i>
+                                تصفية
+                            </button>
                         </div>
                     </div>
                 </div>
-
-              
-            </div>
-        </header>
-
-        <main class="app-main">
-            <!-- قسم جهات الاتصال -->
-            <section class="contacts-section">
-                <div class="section-header">
-                    <div class="contacts-count" id="contactsCount">0 جهة اتصال</div>
-                </div>
                 
-                <div class="contacts-container" id="contactsContainer">
-                    <!-- سيتم تعبئة جهات الاتصال هنا ديناميكياً -->
+                <!-- Contacts Grid/List -->
+                <div id="contacts-container" class="contacts-grid">
+                    <!-- سيتم ملؤها ديناميكياً -->
+                    <div class="empty-state">
+                        <i class="fas fa-user-clock"></i>
+                        <h3>جاري تحميل جهات الاتصال...</h3>
+                        <p>يرجى الانتظار قليلاً</p>
+                        <div class="loading-spinner"></div>
+                    </div>
                 </div>
-            </section>
+            </div>
         </main>
-
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-            <button class="sync-btn" id="manualSync">
-                <i class="fas fa-sync-alt"></i>
-            </button>
-        </div>
+        
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-info">
+                <div class="data-info">
+                    <span id="contacts-count">0 جهة اتصال</span>
+                    •
+                    <span id="cache-size">الحجم: --</span>
+                </div>
+                <div class="update-info">
+                    <i class="fas fa-cloud"></i>
+                    <span>المزامنة التلقائية كل 5 دقائق</span>
+                </div>
+            </div>
+            <div class="footer-copyright">
+                © 2024 دليل الاتصال الذكي - تم التطوير بواسطة ابو رعد ❤️
+            </div>
+        </footer>
     </div>
-
-    <!-- Notification System -->
-    <div class="notification-center" id="notificationCenter"></div>
-
+    
     <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-spinner">
-            <div class="spinner"></div>
-            <p>جاري تحميل البيانات...</p>
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner-large"></div>
+            <div class="loading-text" id="loading-text">جاري التحميل...</div>
+            <div class="loading-progress">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
         </div>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="script.js"></script>
+    
+    <!-- Notifications Center -->
+    <div id="notification-center" class="notification-center"></div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> إعدادات النظام</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- سيتم ملؤها ديناميكياً -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript Files -->
+    <script src="utils.js"></script>
+    <script src="auth.js"></script>
+    <script src="CONTACTS.xlsx"></script>
+    <script src="app.js"></script>
 </body>
 </html>
