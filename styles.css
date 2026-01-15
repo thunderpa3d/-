@@ -761,6 +761,23 @@ body {
     font-weight: 600;
 }
 
+
+/* ========== Contacts Details ========== */
+.contact-detail.address {
+    color: var(--gray-600);
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.contact-detail.address i {
+    color: var(--warning-color);
+}
+
+/* جعل العنوان يظهر في سطر جديد */
+.contact-detail.address span {
+    display: block;
+    margin-top: 0.125rem;
+}
 .contact-details {
     margin-bottom: 1rem;
 }
@@ -1307,4 +1324,5 @@ body {
         background: var(--gray-200);
         color: var(--gray-800);
     }
+
 }
